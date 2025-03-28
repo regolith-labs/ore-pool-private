@@ -89,7 +89,7 @@ pub struct Challenge {
     // The current minimum difficulty accepted by the ORE program.
     pub min_difficulty: u64,
 
-    // The cutoff time to stop accepting contributions.
+    // The cutoff time when the server will stop accepting contributions.
     pub cutoff_time: u64,
 }
 
@@ -140,22 +140,9 @@ pub struct Staker {
 
 /// The response from the /challenge request.
 #[derive(Debug, Serialize, Deserialize, Copy, Clone)]
-pub struct MemberChallenge {
+pub struct ChallengeWithTimestamp {
     /// The challenge to mine for.
     pub challenge: Challenge,
-
-    /// The number of total members to divide the nonce space by.
-    pub num_total_members: u64,
-
-    /// The id/index for distinguishing devices the client is using.
-    #[deprecated(
-        since = "1.2.0",
-        note = "The pool server no longer automatically assigns device IDs. Miners should set their device IDs manually."
-    )]
-    pub device_id: u8,
-
-    /// The number of client devices permitted per member.
-    pub num_devices: u8,
 
     /// The unix timestamp from the onchain clock.
     pub unix_timestamp: i64,

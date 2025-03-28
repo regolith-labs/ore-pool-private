@@ -226,21 +226,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "512761e0bb2578dd7380c6baaa0f4ce03e84f95e960231d1dec8bf4d7d6e2627"
 
 [[package]]
-name = "admin"
-version = "1.6.1"
-dependencies = [
- "ore-api",
- "ore-boost-api",
- "ore-pool-api",
- "solana-client",
- "solana-program",
- "solana-sdk",
- "steel",
- "thiserror 1.0.69",
- "tokio",
-]
-
-[[package]]
 name = "aead"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3118,9 +3103,9 @@ dependencies = [
 
 [[package]]
 name = "ore-api"
-version = "3.3.0"
+version = "3.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "02dc54bfe5b59c3cf2459092d07a7944a3568007718afcfdcf1b66f3e17eb6d5"
+checksum = "620a76fd7acb13d57bab6821f743e901530e2c2b4013a93ada7d0f2015194f87"
 dependencies = [
  "array-const-fn-init",
  "bytemuck",
@@ -3157,41 +3142,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ore-pool-api"
-version = "1.6.1"
-dependencies = [
- "array-const-fn-init",
- "bytemuck",
- "const-crypto",
- "drillx",
- "num_enum",
- "ore-api",
- "ore-boost-api",
- "solana-program",
- "spl-associated-token-account 6.0.0",
- "spl-token 4.0.2",
- "static_assertions",
- "steel",
- "thiserror 1.0.69",
-]
-
-[[package]]
-name = "ore-pool-program"
-version = "1.6.1"
-dependencies = [
- "bytemuck",
- "drillx",
- "ore-api",
- "ore-boost-api",
- "ore-pool-api",
- "rand 0.8.5",
- "solana-program",
- "spl-associated-token-account 6.0.0",
- "spl-token 4.0.2",
- "steel",
-]
-
-[[package]]
 name = "ore-pool-server"
 version = "0.0.1"
 dependencies = [
@@ -3210,7 +3160,6 @@ dependencies = [
  "log",
  "ore-api",
  "ore-boost-api",
- "ore-pool-api",
  "ore-pool-types",
  "postgres-types",
  "rand 0.8.5",
