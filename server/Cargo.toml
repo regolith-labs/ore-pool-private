@@ -19,7 +19,6 @@ futures-util = { workspace = true }
 log = { workspace = true }
 ore-api = { workspace = true }
 ore-boost-api = { workspace = true }
-ore-pool-api = { workspace = true }
 ore-pool-types = { workspace = true }
 postgres-types = { workspace = true }
 reqwest = { workspace = true }
