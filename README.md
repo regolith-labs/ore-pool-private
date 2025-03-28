@@ -15,7 +15,7 @@ COMMAND="init" RPC_URL="" KEYPAIR_PATH="/my/path/id.json" POOL_URL="" cargo run 
 Start the server. Parameterized via [env vars](./server/.env.example).
 ```sh
 # cd ./server
-RPC_URL="" KEYPAIR_PATH="/my/path/id.json" DB_URL="" ATTR_EPOCH="60" HELIUS_AUTH_TOKEN="" OPERATOR_COMMISSION="" RUST_LOG=info cargo run --release
+RPC_URL="URL" AUTHORITY="PROOF_AUTHORITY" KEYPAIR_PATH="/my/path/id.json"  RUST_LOG=info cargo run --release
 ```
 
 ## Webhook
