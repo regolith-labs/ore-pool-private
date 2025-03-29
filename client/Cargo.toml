@@ -34,6 +34,7 @@ steel.workspace = true
 tokio = { workspace = true, features = ["full"] }
 tokio-tungstenite.workspace = true
 
+
 [profile.release]
 opt-level = 3           # Optimize for binary size. You can use "3" for full optimizations if binary size isn't an issue.
 codegen-units = 1       # Better optimization with fewer codegen units

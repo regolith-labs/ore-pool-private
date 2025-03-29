@@ -34,18 +34,15 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
 serde = { features = ["derive"], version = "1.0" }
 serde_json = "1.0"
 sha3 = "0.10"
-solana-account-decoder = "=2.1"
 solana-client = "=2.1"
-solana-program = "=2.1"
 solana-sdk = "=2.1"
-solana-transaction-status = "=2.1"
 spl-token = { features = ["no-entrypoint"], version = "^4" }
 spl-associated-token-account = { features = ["no-entrypoint"], version = "^6" }
 static_assertions = "1.1.0"
 steel = { features = ["spl"], version = "4.0" }
 thiserror = "1.0.57"
 tokio = "1.39"
-tokio-tungstenite = "0.16"
+tokio-tungstenite = { version = "0.16", features = ["native-tls"] }
 
 
 [patch.crates-io]

@@ -7,8 +7,8 @@ pub use miner::Miner;
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     // Launch miner
-    let pool_url = "http://localhost:3000";
-    let _miner = Miner::launch(pool_url).await?;
+    let pool_url = std::env::var("POOL_URL").unwrap();
+    let _miner = Miner::launch(&pool_url).await?;
 
     // Keep main thread alive
     loop {
