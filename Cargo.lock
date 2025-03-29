@@ -3098,6 +3098,7 @@ dependencies = [
  "core_affinity",
  "drillx",
  "futures",
+ "nix",
  "num_cpus",
  "ore-pool-types",
  "rand 0.8.5",

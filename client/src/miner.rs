@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use drillx::{equix, Solution};
+use nix::libc;
 use ore_pool_types::Challenge;
 use tokio::{
     sync::RwLock,
@@ -21,6 +22,11 @@ pub struct Miner {
 
 impl Miner {
     pub async fn launch(pool_url: &str) -> Result<Self, Error> {
+        // Set process priority to lowest
+        unsafe {
+            libc::nice(19);
+        }
+
         // Split nonce-device space for muliple cores
         println!("Splitting nonce-device space for multiple cores...");
         let cores = 12; // num_cpus::get() as u64; // TODO: make this configurable

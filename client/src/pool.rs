@@ -6,7 +6,7 @@ use tokio::task::JoinHandle;
 use tokio_tungstenite::tungstenite::Message;
 
 #[derive(Debug)]
-pub(crate) struct Pool {
+pub struct Pool {
     pub http_client: reqwest::Client,
     pub pool_url: String,
     pub ws_handle: JoinHandle<()>,
