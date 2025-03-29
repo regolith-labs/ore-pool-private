@@ -1,5 +1,5 @@
 use actix_web::{web, HttpResponse, Responder};
-use ore_pool_types::{ChallengeWithTimestamp, ContributePayloadV2, GetChallengePayload};
+use drillx::Solution;
 
 use crate::{aggregator::Aggregator, operator::Operator};
 
@@ -11,7 +11,6 @@ pub async fn address(operator: web::Data<Operator>) -> impl Responder {
 pub async fn challenge(
     aggregator: web::Data<tokio::sync::RwLock<Aggregator>>,
     clock_tx: web::Data<tokio::sync::broadcast::Sender<i64>>,
-    _path: web::Path<GetChallengePayload>,
 ) -> impl Responder {
     // Read from clock
     let mut clock_rx = clock_tx.subscribe();
@@ -24,24 +23,21 @@ pub async fn challenge(
     };
 
     // Acquire read on aggregator for challenge
-    let challenge = {
+    let mut challenge = {
         let aggregator = aggregator.read().await;
         aggregator.current_challenge
     };
 
     // Build member challenge
-    let challenge_with_timestamp = ChallengeWithTimestamp {
-        challenge,
-        unix_timestamp,
-    };
-    HttpResponse::Ok().json(&challenge_with_timestamp)
+    challenge.unix_timestamp = unix_timestamp;
+    HttpResponse::Ok().json(&challenge)
 }
 
 /// Accepts solutions from pool members. If their solutions are valid, it
 /// aggregates the contributions into a list for publishing and submission.
 pub async fn contribute(
     aggregator: web::Data<tokio::sync::RwLock<Aggregator>>,
-    payload: web::Json<ContributePayloadV2>,
+    payload: web::Json<Solution>,
 ) -> impl Responder {
     // acquire read on aggregator for challenge
     let r_aggregator = aggregator.read().await;
@@ -50,15 +46,14 @@ pub async fn contribute(
     drop(r_aggregator);
 
     // decode solution difficulty
-    let solution = &payload.solution;
+    let solution = payload.0;
     let difficulty = solution.to_hash().difficulty();
     let score = 2u64.pow(difficulty);
 
     // error if solution below min difficulty
     if difficulty < (challenge.min_difficulty as u32) {
         log::error!(
-            "solution below min difficulity: {:?} received: {:?} required: {:?}",
-            payload.authority,
+            "solution below min difficulity: received: {:?} required: {:?}",
             difficulty,
             challenge.min_difficulty
         );
@@ -69,7 +64,7 @@ pub async fn contribute(
     if best_score < score {
         let mut w_aggregator = aggregator.write().await;
         w_aggregator.best_score = score;
-        w_aggregator.best_solution = payload.solution;
+        w_aggregator.best_solution = solution;
     }
 
     HttpResponse::Ok().finish()

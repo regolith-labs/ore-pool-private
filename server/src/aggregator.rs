@@ -77,6 +77,7 @@ impl Aggregator {
             lash_hash_at: proof.last_hash_at,
             min_difficulty,
             cutoff_time,
+            unix_timestamp: 0,
         };
 
         // build self
