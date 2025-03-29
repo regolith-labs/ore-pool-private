@@ -4,19 +4,10 @@ use actix_web::{http::header::ToStrError, HttpResponse};
 pub enum Error {
     #[error("bincode")]
     Bincode(#[from] bincode::Error),
-    #[error("base64 decode")]
-    Base64Decode(#[from] base64::DecodeError),
     #[error("try from slice")]
     TryFromSlice(#[from] std::array::TryFromSliceError),
     #[error("rewards channel send")]
-    RewardsChannelSend(
-        #[from]
-        tokio::sync::mpsc::error::SendError<ore_api::event::MineEvent>,
-    ),
-    #[error("tokio postgres")]
-    TokioPostgres(#[from] tokio_postgres::Error),
-    #[error("deadpool postgress")]
-    DeadpoolPostgres(#[from] deadpool_postgres::PoolError),
+    RewardsChannelSend(#[from] tokio::sync::mpsc::error::SendError<ore_api::event::MineEvent>),
     #[error("http header to string")]
     HttpHeader(#[from] ToStrError),
     #[error("reqwest")]
@@ -25,6 +16,8 @@ pub enum Error {
     SerdeJson(#[from] serde_json::Error),
     #[error("std io")]
     StdIO(#[from] std::io::Error),
+    #[error("websocket closed")]
+    WebsocketClosed(#[from] actix_ws::Closed),
     #[error("std env")]
     StdEnv(#[from] std::env::VarError),
     #[error("std parse int")]

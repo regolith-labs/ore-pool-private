@@ -1,0 +1,49 @@
+[package]
+name = "ore-miner"
+version = "0.0.1"
+edition = "2021"
+license = "Apache-2.0"
+description = "A client for mining in a private pool."
+documentation = "https://ore.supply"
+homepage = "https://ore.supply"
+repository = "https://github.com/regolith-labs/ore-cli"
+readme = "./README.md"
+keywords = ["solana", "crypto", "mining"]
+
+[[bin]]
+name = "ore"
+path = "src/main.rs"
+
+[features]
+default = []
+admin = []
+
+[dependencies]
+anyhow = "1.0"
+core_affinity = "0.8.1"
+drillx = "2.1.0"
+futures = "0.3.30"
+num_cpus = "1.16.0"
+ore-pool-types = { path = "../types" }
+rand.workspace = true
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+steel.workspace = true
+tokio = { workspace = true, features = ["full"] }
+tokio-tungstenite.workspace = true
+
+[profile.release]
+opt-level = 3           # Optimize for binary size. You can use "3" for full optimizations if binary size isn't an issue.
+codegen-units = 1       # Better optimization with fewer codegen units
+lto = true              # Enable Link Time Optimization (LTO)
+debug = false           # Disable debug info to reduce binary size
+panic = 'abort'         # Reduces the binary size further by not including unwinding information
+rpath = false
+incremental = false
+overflow-checks = false
+
+[build]
+rustflags = ["-C", "target-cpu=native"]
+
+[patch.crates-io]

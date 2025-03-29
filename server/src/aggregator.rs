@@ -3,12 +3,12 @@ use ore_api::{
     consts::{BUS_ADDRESSES, BUS_COUNT},
     state::Bus,
 };
-use ore_pool_types::Challenge;
+use ore_pool_types::{Challenge, PoolMessage};
 use rand::Rng;
 use solana_sdk::{pubkey::Pubkey, signer::Signer};
 use steel::AccountDeserialize;
 
-use crate::{error::Error, operator::Operator, submit};
+use crate::{error::Error, operator::Operator, submit, Sessions};
 
 /// Aggregates contributions from the pool members.
 pub struct Aggregator {
@@ -22,9 +22,10 @@ pub struct Aggregator {
     pub best_score: u64,
 }
 
-pub async fn process_contributions(
+pub async fn mining_loop(
     aggregator: &tokio::sync::RwLock<Aggregator>,
     operator: &Operator,
+    sessions: &Sessions,
 ) -> Result<(), Error> {
     // outer loop for new challenges
     loop {
@@ -54,11 +55,10 @@ pub async fn process_contributions(
             r_aggregator.best_score
         };
         if best_score > 0 {
-            // submit if contributions exist
+            // submit solution and dispatch new challenge
             let mut w_aggregator = aggregator.write().await;
-            if let Err(err) = w_aggregator.submit_and_reset(operator).await {
-                log::error!("{:?}", err);
-            }
+            w_aggregator.submit_and_reset(operator).await?;
+            w_aggregator.dispatch_challenge(sessions).await?;
         } else {
             // no contributions yet, wait for the first one to submit
             tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
@@ -66,16 +66,63 @@ pub async fn process_contributions(
     }
 }
 
+pub async fn process_solutions(
+    aggregator: &tokio::sync::RwLock<Aggregator>,
+    solutions_rx: &mut tokio::sync::mpsc::UnboundedReceiver<Solution>,
+    // operator: &Operator,
+) -> Result<(), Error> {
+    // Process solutions from stream
+    while let Some(solution) = solutions_rx.recv().await {
+        log::info!("processing solution...");
+
+        // read data from aggregator
+        let r_aggregator = aggregator.read().await;
+        let challenge = r_aggregator.current_challenge;
+        let best_score = r_aggregator.best_score;
+        drop(r_aggregator);
+
+        // verify solution
+        if !solution.is_valid(&challenge.challenge) {
+            log::error!("invalid solution: {:?}", solution);
+            continue;
+        }
+
+        // decode solution difficulty
+        let score = solution.to_hash().difficulty() as u64;
+        log::info!("solution difficulty: {:?}", score);
+
+        // error if solution below min difficulty
+        if score < challenge.min_score {
+            log::error!(
+                "solution below min difficulity: received: {:?} required: {:?}",
+                score,
+                challenge.min_score
+            );
+            return Ok(());
+        }
+
+        // update best score if new best
+        if best_score < score {
+            log::info!("new best score: {:?}", score);
+            let mut w_aggregator = aggregator.write().await;
+            w_aggregator.best_score = score;
+            w_aggregator.best_solution = solution;
+        }
+    }
+
+    Ok(())
+}
+
 impl Aggregator {
     pub async fn new(operator: &Operator) -> Result<Self, Error> {
         // fetch accounts
         let proof = operator.get_proof().await?;
         let cutoff_time = operator.get_cutoff(&proof).await?;
-        let min_difficulty = operator.min_difficulty().await?;
+        let min_score = operator.min_score().await?;
         let challenge = Challenge {
             challenge: proof.challenge,
             lash_hash_at: proof.last_hash_at,
-            min_difficulty,
+            min_score,
             cutoff_time,
             unix_timestamp: 0,
         };
@@ -178,10 +225,10 @@ impl Aggregator {
             let proof = operator.get_proof().await?;
             if proof.last_hash_at != last_hash_at {
                 let cutoff_time = operator.get_cutoff(&proof).await?;
-                let min_difficulty = operator.min_difficulty().await?;
+                let min_score = operator.min_score().await?;
                 self.current_challenge.challenge = proof.challenge;
                 self.current_challenge.lash_hash_at = proof.last_hash_at;
-                self.current_challenge.min_difficulty = min_difficulty;
+                self.current_challenge.min_score = min_score;
                 self.current_challenge.cutoff_time = cutoff_time;
                 self.best_score = 0;
                 self.best_solution = Solution::new([0; 16], [0; 8]);
@@ -194,5 +241,25 @@ impl Aggregator {
                 tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
             }
         }
+    }
+
+    async fn dispatch_challenge(&self, sessions: &Sessions) -> Result<(), Error> {
+        let mut sessions = sessions.lock().await;
+        for session in sessions.values_mut() {
+            let _ = self.send_challenge(session).await;
+        }
+        Ok(())
+    }
+
+    pub async fn send_challenge(&self, session: &mut actix_ws::Session) -> Result<(), Error> {
+        session
+            .text(
+                serde_json::to_string(&PoolMessage::NewChallenge {
+                    challenge: self.current_challenge,
+                })
+                .unwrap(),
+            )
+            .await?;
+        Ok(())
     }
 }

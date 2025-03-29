@@ -5,13 +5,18 @@ mod operator;
 mod submit;
 mod utils;
 
+use std::{collections::HashMap, sync::Arc};
+
 use actix_web::{get, middleware, web, App, HttpResponse, HttpServer, Responder};
 use aggregator::Aggregator;
+use drillx::Solution;
 use operator::Operator;
+use tokio::sync::Mutex;
 use utils::create_cors;
 
-// TODO: publish attestation to s3
-// write attestation url to db with last-hash-at as foreign key
+// Shared state to track all active websocket sessions
+pub type Sessions = Arc<Mutex<HashMap<u64, actix_ws::Session>>>;
+
 #[actix_web::main]
 async fn main() -> Result<(), error::Error> {
     env_logger::init();
@@ -20,17 +25,38 @@ async fn main() -> Result<(), error::Error> {
     let (clock_tx, _) = tokio::sync::broadcast::channel::<i64>(1);
     let clock_tx = web::Data::new(clock_tx);
 
-    // operator and aggregator mutex
+    // solution channel
+    let (solutions_tx, mut solutions_rx) = tokio::sync::mpsc::unbounded_channel::<Solution>();
+    let solutions_tx = web::Data::new(solutions_tx);
+
+    // websocket sessions
+    let sessions = web::Data::new(Arc::new(Mutex::new(HashMap::new())));
+
+    // operator and aggregator
     let operator = web::Data::new(Operator::new()?);
     let aggregator = web::Data::new(tokio::sync::RwLock::new(Aggregator::new(&operator).await?));
 
-    // process contributions
+    // start mining loop
     tokio::task::spawn({
         let operator = operator.clone();
         let aggregator = aggregator.clone();
+        let sessions = sessions.clone();
         async move {
             if let Err(err) =
-                aggregator::process_contributions(aggregator.as_ref(), operator.as_ref()).await
+                aggregator::mining_loop(aggregator.as_ref(), operator.as_ref(), sessions.as_ref())
+                    .await
+            {
+                log::error!("{:?}", err);
+            }
+        }
+    });
+
+    // process solutions
+    tokio::task::spawn({
+        let aggregator = aggregator.clone();
+        async move {
+            if let Err(err) =
+                aggregator::process_solutions(aggregator.as_ref(), &mut solutions_rx).await
             {
                 log::error!("{:?}", err);
             }
@@ -77,11 +103,13 @@ async fn main() -> Result<(), error::Error> {
             .wrap(middleware::Logger::default())
             .wrap(create_cors())
             .app_data(clock_tx.clone())
+            .app_data(solutions_tx.clone())
             .app_data(operator.clone())
             .app_data(aggregator.clone())
-            .service(web::resource("/address").route(web::get().to(handlers::address)))
-            .service(web::resource("/challenge").route(web::get().to(handlers::challenge)))
-            .service(web::resource("/contribute").route(web::post().to(handlers::contribute)))
+            .app_data(sessions.clone())
+            // .service(web::resource("/challenge").route(web::get().to(handlers::challenge)))
+            // .service(web::resource("/contribute").route(web::post().to(handlers::contribute)))
+            .service(web::resource("/connect").route(web::get().to(handlers::ws_handler)))
             .service(health)
     })
     .bind("0.0.0.0:3000")?

@@ -66,7 +66,7 @@ impl Operator {
             .max(0) as u64)
     }
 
-    pub async fn min_difficulty(&self) -> Result<u64, Error> {
+    pub async fn min_score(&self) -> Result<u64, Error> {
         let config = self.get_config().await?;
         let program_min = config.min_difficulty;
         match MIN_DIFFICULTY {
