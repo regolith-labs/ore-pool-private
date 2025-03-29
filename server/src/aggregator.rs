@@ -183,6 +183,8 @@ impl Aggregator {
                 self.current_challenge.lash_hash_at = proof.last_hash_at;
                 self.current_challenge.min_difficulty = min_difficulty;
                 self.current_challenge.cutoff_time = cutoff_time;
+                self.best_score = 0;
+                self.best_solution = Solution::new([0; 16], [0; 8]);
                 return Ok(());
             } else {
                 retries += 1;
